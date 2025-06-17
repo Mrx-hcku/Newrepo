@@ -1,1 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chatenger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f0f0;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 16px;
+    }
+    #myid {
+      background: #4CAF50;
+      color: white;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+    input, button {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+    }
+    #chat {
+      flex: 1;
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+    .msg { margin: 6px 0; }
+    .me { color: green; }
+    .other { color: black; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="myid">Your ID: ...</div>
+    <input type="text" id="targetId" placeholder="Enter receiver's ID">
+    <button onclick="connectTarget()">Connect</button>
+    
+    <div id="chat"></div>
+    
+    <input type="text" id="message" placeholder="Type message..." disabled>
+    <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+  </div>
 
+  <script>
+    const myId = Math.random().toString(36).substring(2, 8);
+    document.getElementById("myid").innerText = "Your ID: " + myId;
+
+    const ws = new WebSocket("wss://chatenger-jd3z.onrender.com");
+    let targetUserId = null;
+
+    const chat = document.getElementById("chat");
+    const msgInput = document.getElementById("message");
+    const sendBtn = document.getElementById("sendBtn");
+    const targetInput = document.getElementById("targetId");
+
+    ws.onopen = () => appendMsg("🟢 Connected to server", "other");
+
+    ws.onmessage = (e) => {
+      const data = e.data;
+      if (data.includes("->") && data.includes(":")) {
+        const [from, rest] = data.split("->");
+        const [to, msg] = rest.split(":");
+        if (to === myId) {
+          appendMsg(`${from}: ${msg}`, "other");
+        }
+      }
+    };
+
+    function connectTarget() {
+      const input = targetInput.value.trim();
+      if (input.length > 0) {
+        targetUserId = input;
+        msgInput.disabled = false;
+        sendBtn.disabled = false;
+        appendMsg("🔗 Connected to: " + targetUserId, "other");
+      } else {
+        alert("Please enter a valid ID");
+      }
+    }
+
+    function sendMessage() {
+      const msg = msgInput.value.trim();
+      if (targetUserId && msg.length > 0) {
+        const payload = `${myId}->${targetUserId}:${msg}`;
+        ws.send(payload);
+        appendMsg(`Me: ${msg}`, "me");
+        msgInput.value = "";
+      }
+    }
+
+    function appendMsg(text, type) {
+      const div = document.createElement("div");
+      div.className = "msg " + type;
+      div.innerText = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  </script>
+</body>
+</html>
