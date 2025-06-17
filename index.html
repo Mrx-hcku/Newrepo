@@ -1,1 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chatenger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #e0e0e0;
+    }
+    .container {
+      max-width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+    }
+    #myid {
+      background: #4CAF50;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      border-radius: 8px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    #targetId {
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    #chat {
+      flex: 1;
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+    #message {
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+    button {
+      padding: 12px;
+      font-size: 16px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1976D2;
+    }
+    .msg {
+      margin: 5px 0;
+      word-wrap: break-word;
+    }
+    .me {
+      color: #0B8043;
+    }
+    .other {
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div id="myid">Your ID: ...</div>
+  <input type="text" id="targetId" placeholder="Enter receiver's ID">
+  <button onclick="connect()">Connect</button>
+  <div id="chat"></div>
+  <input type="text" id="message" placeholder="Type a message">
+  <button onclick="sendMessage()">Send</button>
+</div>
 
+<script>
+  const myId = Math.random().toString(36).substring(2, 8);
+  document.getElementById("myid").innerText = "Your ID: " + myId;
+
+  let targetId = "";
+  const chat = document.getElementById("chat");
+  const msgInput = document.getElementById("message");
+  const targetInput = document.getElementById("targetId");
+
+  const ws = new WebSocket("wss://chatenger-jd3z.onrender.com");
+
+  ws.onopen = () => appendMsg("🟢 Connected to server", "other");
+
+  ws.onmessage = (e) => {
+    try {
+      const data = e.data;
+      if (data.includes("->") && data.includes(":")) {
+        const [from, rest] = data.split("->");
+        const [to, msg] = rest.split(":");
+        if (to === myId) {
+          appendMsg(`${from}: ${msg}`, "other");
+        }
+      }
+    } catch (err) {
+      console.error("Message parsing error:", err.message);
+    }
+  };
+
+  function connect() {
+    targetId = targetInput.value.trim();
+    if (targetId) {
+      appendMsg(`Connecting to ${targetId}...`, "other");
+    }
+  }
+
+  function sendMessage() {
+    const msg = msgInput.value.trim();
+    if (!targetId) {
+      alert("Please enter and connect to a target ID first.");
+      return;
+    }
+    if (msg) {
+      const payload = `${myId}->${targetId}:${msg}`;
+      ws.send(payload);
+      appendMsg(`Me: ${msg}`, "me");
+      msgInput.value = "";
+    }
+  }
+
+  function appendMsg(text, type) {
+    const div = document.createElement("div");
+    div.innerText = text;
+    div.className = "msg " + type;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+</script>
+
+</body>
+</html>
